@@ -40,13 +40,7 @@
   },
   "gitHead": "ec7878b9ce54f2537721218ae0fe4017e4004806",
   "dependencies": {
-    "@types/react": "^16.9.23",
-    "@unimodules/core": "^3.0.2",
-    "expo-asset": "^8.0.0",
     "lodash": "^4.17.15",
-    "nullthrows": "^1.1.0",
-    "react": "^16.13.0",
-    "react-native": "^0.61.5",
-    "react-native-unimodules": "^0.5.4"
+    "nullthrows": "^1.1.0"
   }
 }
