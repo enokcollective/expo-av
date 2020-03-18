@@ -1,14 +1,9 @@
 import * as React from 'react';
 import { ImageProps, View } from 'react-native';
 
-import {
-  AVPlaybackNativeSource,
-  AVPlaybackSource,
-  AVPlaybackStatus,
-  AVPlaybackStatusToSet,
-} from './AV';
+import { PlaybackNativeSource, PlaybackSource, PlaybackStatus, PlaybackStatusToSet } from './AV';
 
-export type VideoNaturalSize = {
+export type NaturalSize = {
   width: number;
   height: number;
   orientation: 'portrait' | 'landscape';
@@ -20,30 +15,30 @@ export enum ResizeMode {
   STRETCH = 'stretch',
 }
 
-export type VideoReadyForDisplayEvent = {
-  naturalSize: VideoNaturalSize;
-  status: AVPlaybackStatus;
+export type ReadyForDisplayEvent = {
+  naturalSize: NaturalSize;
+  status: PlaybackStatus;
 };
 
-export type VideoFullscreenUpdateEvent = {
+export type FullscreenUpdateEvent = {
   fullscreenUpdate: 0 | 1 | 2 | 3;
-  status: AVPlaybackStatus;
+  status: PlaybackStatus;
 };
 
 export type VideoProps = {
   // Source stuff
-  source?: AVPlaybackSource; // { uri: 'http://foo/bar.mp4' }, Asset, or require('./foo/bar.mp4')
+  source?: PlaybackSource; // { uri: 'http://foo/bar.mp4' }, Asset, or require('./foo/bar.mp4')
   posterSource?: ImageProps['source']; // { uri: 'http://foo/bar.mp4' } or require('./foo/bar.mp4')
   posterStyle?: ImageProps['style'];
 
   // Callbacks
-  onPlaybackStatusUpdate?: (status: AVPlaybackStatus) => void;
+  onPlaybackStatusUpdate?: (status: PlaybackStatus) => void;
   onLoadStart?: () => void;
-  onLoad?: (status: AVPlaybackStatus) => void;
+  onLoad?: (status: PlaybackStatus) => void;
   onError?: (error: string) => void;
-  onReadyForDisplay?: (event: VideoReadyForDisplayEvent) => void;
-  onFullscreenUpdate?: (event: VideoFullscreenUpdateEvent) => void;
-  onIOSFullscreenUpdate?: (event: VideoFullscreenUpdateEvent) => void;
+  onReadyForDisplay?: (event: ReadyForDisplayEvent) => void;
+  onFullscreenUpdate?: (event: FullscreenUpdateEvent) => void;
+  onIOSFullscreenUpdate?: (event: FullscreenUpdateEvent) => void;
 
   // UI stuff
   useNativeControls?: boolean;
@@ -53,7 +48,7 @@ export type VideoProps = {
   usePoster?: boolean;
 
   // Playback API
-  status?: AVPlaybackStatusToSet;
+  status?: PlaybackStatusToSet;
   progressUpdateIntervalMillis?: number;
   positionMillis?: number;
   shouldPlay?: boolean;
@@ -71,20 +66,20 @@ export type VideoProps = {
   rotation?: number;
 } & React.ComponentProps<typeof View>;
 
-export type VideoNativeProps = {
-  source?: AVPlaybackNativeSource | null;
+export type NativeProps = {
+  source?: PlaybackNativeSource | null;
   resizeMode?: unknown;
-  status?: AVPlaybackStatusToSet;
+  status?: PlaybackStatusToSet;
   onLoadStart?: () => void;
-  onLoad?: (event: { nativeEvent: AVPlaybackStatus }) => void;
+  onLoad?: (event: { nativeEvent: PlaybackStatus }) => void;
   onError?: (event: { nativeEvent: { error: string } }) => void;
-  onStatusUpdate?: (event: { nativeEvent: AVPlaybackStatus }) => void;
-  onReadyForDisplay?: (event: { nativeEvent: VideoReadyForDisplayEvent }) => void;
-  onFullscreenUpdate?: (event: { nativeEvent: VideoFullscreenUpdateEvent }) => void;
+  onStatusUpdate?: (event: { nativeEvent: PlaybackStatus }) => void;
+  onReadyForDisplay?: (event: { nativeEvent: ReadyForDisplayEvent }) => void;
+  onFullscreenUpdate?: (event: { nativeEvent: FullscreenUpdateEvent }) => void;
   useNativeControls?: boolean;
 } & React.ComponentProps<typeof View>;
 
 export type VideoState = {
   showPoster: boolean;
 };
-export type ExponentVideoComponent = React.ComponentClass<VideoNativeProps>;
+export type ExponentVideoComponent = React.ComponentClass<NativeProps>;

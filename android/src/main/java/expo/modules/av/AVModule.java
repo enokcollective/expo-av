@@ -1,6 +1,5 @@
 package expo.modules.av;
 
-import android.Manifest;
 import android.content.Context;
 
 import org.unimodules.core.ExportedModule;
@@ -8,11 +7,9 @@ import org.unimodules.core.ModuleRegistry;
 import org.unimodules.core.Promise;
 import org.unimodules.core.arguments.ReadableArguments;
 import org.unimodules.core.interfaces.ExpoMethod;
-import org.unimodules.interfaces.permissions.Permissions;
 
 public class AVModule extends ExportedModule {
   private AVManagerInterface mAVManager;
-  private ModuleRegistry mModuleRegistry;
 
   public AVModule(Context context) {
     super(context);
@@ -25,7 +22,6 @@ public class AVModule extends ExportedModule {
 
   @Override
   public void onCreate(ModuleRegistry moduleRegistry) {
-    mModuleRegistry = moduleRegistry;
     mAVManager = moduleRegistry.getModule(AVManagerInterface.class);
   }
 
@@ -119,15 +115,5 @@ public class AVModule extends ExportedModule {
   @ExpoMethod
   public void unloadAudioRecorder(final Promise promise) {
     mAVManager.unloadAudioRecorder(promise);
-  }
-
-  @ExpoMethod
-  public void requestPermissionsAsync(final Promise promise) {
-    Permissions.askForPermissionsWithPermissionsManager(mModuleRegistry.getModule(Permissions.class), promise, Manifest.permission.RECORD_AUDIO);
-  }
-
-  @ExpoMethod
-  public void getPermissionsAsync(final Promise promise) {
-    Permissions.getPermissionsWithPermissionsManager(mModuleRegistry.getModule(Permissions.class), promise, Manifest.permission.RECORD_AUDIO);
   }
 }

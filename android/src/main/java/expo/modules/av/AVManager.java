@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.media.AudioManager;
 import android.media.MediaRecorder;
 import android.net.Uri;
@@ -33,7 +34,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
-import java.util.Iterator;
 
 import expo.modules.av.player.PlayerData;
 import expo.modules.av.video.VideoView;
@@ -89,7 +89,6 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
   private long mAudioRecorderDurationAlreadyRecorded = 0L;
   private boolean mAudioRecorderIsRecording = false;
   private boolean mAudioRecorderIsPaused = false;
-  private boolean mIsRegistered = false;
 
   private ModuleRegistry mModuleRegistry;
 
@@ -109,7 +108,6 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
     };
     mContext.registerReceiver(mNoisyAudioStreamReceiver,
         new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY));
-    mIsRegistered = true;
   }
 
   @Override
@@ -183,21 +181,10 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
 
   @Override
   public void onHostDestroy() {
-    if (mIsRegistered) {
-      mContext.unregisterReceiver(mNoisyAudioStreamReceiver);
-      mIsRegistered = false;
+    mContext.unregisterReceiver(mNoisyAudioStreamReceiver);
+    for (final Integer key : mSoundMap.keySet()) {
+      removeSoundForKey(key);
     }
-
-    // remove all remaining sounds
-    Iterator<PlayerData> iter = mSoundMap.values().iterator();
-    while (iter.hasNext()) {
-      final PlayerData data = iter.next();
-      iter.remove();
-      if (data != null) {
-        data.release();
-      }
-    }
-
     for (final VideoView videoView : mVideoViewSet) {
       videoView.unloadPlayerAndMediaController();
     }
@@ -512,7 +499,7 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
   // Recording API
 
   private boolean isMissingAudioRecordingPermissions() {
-    return !mModuleRegistry.getModule(Permissions.class).hasGrantedPermissions(Manifest.permission.RECORD_AUDIO);
+    return mModuleRegistry.getModule(Permissions.class).getPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED;
   }
 
   // Rejects the promise and returns false if the MediaRecorder is not found.
