@@ -498,7 +498,7 @@ withEXVideoViewForTag:(nonnull NSNumber *)reactTag
     return UMErrorWithMessage(@"No FileSystem module.");
   }
   
-  NSString *directory = [fileSystem.cachesDirectory stringByAppendingPathComponent:@"AV"];
+  NSString *directory = [fileSystem.documentDirectory stringByAppendingPathComponent:@"AV"];
   [fileSystem ensureDirExistsWithPath:directory];
   NSString *soundFilePath = [directory stringByAppendingPathComponent:_audioRecorderFilename];
   NSURL *soundFileURL = [NSURL fileURLWithPath:soundFilePath];
