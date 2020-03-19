@@ -209,7 +209,7 @@ UM_EXPORT_MODULE(ExponentAV);
 - (NSError *)_updateAudioSessionCategoryForAudioSessionMode:(EXAVAudioSessionMode)audioSessionMode
 {
   AVAudioSessionCategory requiredAudioCategory;
-  AVAudioSessionCategoryOptions requiredAudioCategoryOptions = 0;
+  AVAudioSessionCategoryOptions requiredAudioCategoryOptions = _allowsAudioRecording ? AVAudioSessionCategoryOptionAllowBluetooth : 0;
   
   if (!_playsInSilentMode) {
     // _allowsRecording is guaranteed to be false, and _interruptionMode is guaranteed to not be EXAudioInterruptionModeDuckOthers (see above)
