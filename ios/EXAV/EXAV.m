@@ -209,7 +209,7 @@ UM_EXPORT_MODULE(ExponentAV);
 - (NSError *)_updateAudioSessionCategoryForAudioSessionMode:(EXAVAudioSessionMode)audioSessionMode
 {
   AVAudioSessionCategory requiredAudioCategory;
-  AVAudioSessionCategoryOptions requiredAudioCategoryOptions = 0;
+  AVAudioSessionCategoryOptions requiredAudioCategoryOptions = _allowsAudioRecording ? AVAudioSessionCategoryOptionAllowBluetooth : 0;
   
   if (!_playsInSilentMode) {
     // _allowsRecording is guaranteed to be false, and _interruptionMode is guaranteed to not be EXAudioInterruptionModeDuckOthers (see above)
@@ -498,7 +498,7 @@ withEXVideoViewForTag:(nonnull NSNumber *)reactTag
     return UMErrorWithMessage(@"No FileSystem module.");
   }
   
-  NSString *directory = [fileSystem.cachesDirectory stringByAppendingPathComponent:@"AV"];
+  NSString *directory = [fileSystem.documentDirectory stringByAppendingPathComponent:@"AV"];
   [fileSystem ensureDirExistsWithPath:directory];
   NSString *soundFilePath = [directory stringByAppendingPathComponent:_audioRecorderFilename];
   NSURL *soundFileURL = [NSURL fileURLWithPath:soundFilePath];
