@@ -7,8 +7,10 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.pm.PackageManager;
 import android.media.AudioManager;
 import android.media.MediaRecorder;
+import android.media.AudioDeviceInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -584,11 +586,27 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
       mAudioRecorder = null;
     }
 
+    if (mAudioManager != null && mAudioManager.isBluetoothScoOn()) {
+      mAudioManager.setBluetoothScoOn(false);
+      mAudioManager.stopBluetoothSco();
+    }
+
     mAudioRecordingFilePath = null;
     mAudioRecorderIsRecording = false;
     mAudioRecorderIsPaused = false;
     mAudioRecorderDurationAlreadyRecorded = 0L;
     mAudioRecorderUptimeOfLastStartResume = 0L;
+  }
+
+  private AudioDeviceInfo findAudioDevice(int deviceType) {
+    AudioDeviceInfo[] adis = 
+mAudioManager.getDevices(AudioManager.GET_DEVICES_INPUTS);
+    for (AudioDeviceInfo adi : adis) {
+      if (adi.getType() == deviceType) {
+        return adi;
+      }
+    }
+    return null;
   }
 
   @Override
@@ -624,7 +642,7 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
     final String filename = "recording-" + UUID.randomUUID().toString()
       + androidOptions.getString(RECORDING_OPTION_EXTENSION_KEY);
     try {
-      final File directory = new File(mContext.getCacheDir() + File.separator + "Audio");
+      final File directory = new File(mContext.getFilesDir() + File.separator + "Audio");
       ensureDirExists(directory);
       mAudioRecordingFilePath = directory + File.separator + filename;
     } catch (final IOException e) {
@@ -632,8 +650,17 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
       // which is never true.
     }
 
+    AudioDeviceInfo audioInputDevice;
+    audioInputDevice = findAudioDevice(AudioDeviceInfo.TYPE_BLUETOOTH_SCO);
+
     mAudioRecorder = new MediaRecorder();
     mAudioRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
+
+    if (audioInputDevice != null && android.os.Build.VERSION.SDK_INT >= 29) {
+      mAudioRecorder.setPreferredDevice(audioInputDevice);
+      mAudioManager.setBluetoothScoOn(true);
+      mAudioManager.startBluetoothSco();
+    }
 
     mAudioRecorder.setOutputFormat(androidOptions.getInt(RECORDING_OPTION_OUTPUT_FORMAT_KEY));
     mAudioRecorder.setAudioEncoder(androidOptions.getInt(RECORDING_OPTION_AUDIO_ENCODER_KEY));
