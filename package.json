@@ -43,6 +43,13 @@
   },
   "dependencies": {
     "lodash": "^4.17.15",
-    "nullthrows": "^1.1.0"
+    "nullthrows": "^1.1.0",
+    "@types/react": "16.8.24",
+    "@types/react-native": "~0.63.45",
+    "unimodules-permissions-interface": "5.4.0",
+    "react-native-web": "0.14.10",
+    "expo-asset": "8.2.1",
+    "@unimodules/core": "7.0.0",
+    "@unimodules/react-native-adapter": "6.0.0"
   }
 }
