@@ -46,8 +46,8 @@
   "dependencies": {
     "@types/react": "16.8.24",
     "@types/react-native": "~0.63.40",
-    "@unimodules/core": "6.0.0",
-    "@unimodules/react-native-adapter": "5.7.0",
+    "@unimodules/core": "7.0.0",
+    "@unimodules/react-native-adapter": "6.0.0",
     "expo-asset": "8.2.1",
     "lodash": "^4.17.20",
     "nullthrows": "^1.1.1",
