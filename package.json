@@ -50,6 +50,7 @@
     "react-native-web": "0.14.10",
     "expo-asset": "8.2.1",
     "@unimodules/core": "6.0.0",
-    "@unimodules/react-native-adapter": "5.7.0"
+    "@unimodules/react-native-adapter": "5.7.0",
+    "unimodules-test-core": "0.1.0"
   }
 }
