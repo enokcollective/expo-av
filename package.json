@@ -36,12 +36,10 @@
     "expo-asset": "*",
     "react": "*",
     "react-native": "*",
-    "unimodules-permissions-interface": "*",
-    "unimodules-test-core": "*"
+    "unimodules-permissions-interface": "*"
   },
   "devDependencies": {
-    "expo-module-scripts": "~1.2.0",
-    "unimodules-test-core": "0.1.0"
+    "expo-module-scripts": "~1.2.0"
   },
   "dependencies": {
     "@types/react": "16.8.24",
