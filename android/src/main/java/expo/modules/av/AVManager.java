@@ -31,6 +31,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -48,6 +49,7 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
   private static final String AUDIO_MODE_PLAY_THROUGH_EARPIECE = "playThroughEarpieceAndroid";
   private static final String AUDIO_MODE_STAYS_ACTIVE_IN_BACKGROUND = "staysActiveInBackground";
 
+  private static final String RECORDING_OPTION_IS_METERING_ENABLED_KEY = "isMeteringEnabled";
   private static final String RECORDING_OPTIONS_KEY = "android";
   private static final String RECORDING_OPTION_EXTENSION_KEY = "extension";
   private static final String RECORDING_OPTION_OUTPUT_FORMAT_KEY = "outputFormat";
@@ -90,6 +92,8 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
   private long mAudioRecorderDurationAlreadyRecorded = 0L;
   private boolean mAudioRecorderIsRecording = false;
   private boolean mAudioRecorderIsPaused = false;
+  private boolean mIsRegistered = false;
+  private boolean mAudioRecorderIsMeteringEnabled = false;
 
   private ModuleRegistry mModuleRegistry;
 
@@ -108,7 +112,8 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
       }
     };
     mContext.registerReceiver(mNoisyAudioStreamReceiver,
-        new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY));
+      new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY));
+    mIsRegistered = true;
   }
 
   @Override
@@ -182,10 +187,21 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
 
   @Override
   public void onHostDestroy() {
-    mContext.unregisterReceiver(mNoisyAudioStreamReceiver);
-    for (final Integer key : mSoundMap.keySet()) {
-      removeSoundForKey(key);
+    if (mIsRegistered) {
+      mContext.unregisterReceiver(mNoisyAudioStreamReceiver);
+      mIsRegistered = false;
     }
+
+    // remove all remaining sounds
+    Iterator<PlayerData> iter = mSoundMap.values().iterator();
+    while (iter.hasNext()) {
+      final PlayerData data = iter.next();
+      iter.remove();
+      if (data != null) {
+        data.release();
+      }
+    }
+
     for (final VideoView videoView : mVideoViewSet) {
       videoView.unloadPlayerAndMediaController();
     }
@@ -256,7 +272,7 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
     }
 
     final int audioFocusRequest = mAudioInterruptionMode == AudioInterruptionMode.DO_NOT_MIX
-        ? AudioManager.AUDIOFOCUS_GAIN : AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK;
+      ? AudioManager.AUDIOFOCUS_GAIN : AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK;
 
     int result = mAudioManager.requestAudioFocus(this, AudioManager.STREAM_MUSIC, audioFocusRequest);
     mAcquiredAudioFocus = result == AudioManager.AUDIOFOCUS_REQUEST_GRANTED;
@@ -500,7 +516,7 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
   // Recording API
 
   private boolean isMissingAudioRecordingPermissions() {
-    return mModuleRegistry.getModule(Permissions.class).getPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED;
+    return !mModuleRegistry.getModule(Permissions.class).hasGrantedPermissions(Manifest.permission.RECORD_AUDIO);
   }
 
   // Rejects the promise and returns false if the MediaRecorder is not found.
@@ -522,12 +538,38 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
     return duration;
   }
 
+  private int getAudioRecorderLevels() {
+    /**
+     * Defaulting to -160 to match the scenario on iOS platform when there's no sound
+     */
+    if (mAudioRecorder == null || !mAudioRecorderIsMeteringEnabled) {
+      return -160;
+    }
+
+    int amplitude = mAudioRecorder.getMaxAmplitude();
+    if (amplitude == 0) {
+      return -160;
+    }
+
+    // Amplitude to decibel conversion.
+    // Code copied from https://github.com/punarinta/react-native-sound-level
+    // It's supposed to be a ratio between the base sound level and the measured one.
+    // Decibels is a relative measurement.
+    // Value `32767d` gives levels info comparable to iOS's values.
+    // see: https://github.com/punarinta/react-native-sound-level/issues/20
+    return (int) (20 * Math.log(((double) amplitude) / 32767d));
+  }
+
   private Bundle getAudioRecorderStatus() {
     final Bundle map = new Bundle();
     if (mAudioRecorder != null) {
       map.putBoolean("canRecord", true);
       map.putBoolean("isRecording", mAudioRecorderIsRecording);
       map.putInt("durationMillis", (int) getAudioRecorderDurationMillis());
+
+      if (mAudioRecorderIsMeteringEnabled) {
+        map.putInt("metering", (int) getAudioRecorderLevels());
+      }
     }
     return map;
   }
@@ -547,7 +589,7 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
     if (mAudioManager != null && mAudioManager.isBluetoothScoOn()) {
       mAudioManager.setBluetoothScoOn(false);
       mAudioManager.stopBluetoothSco();
-  }
+    }
 
     mAudioRecordingFilePath = null;
     mAudioRecorderIsRecording = false;
@@ -557,11 +599,12 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
   }
 
   private AudioDeviceInfo findAudioDevice(int deviceType) {
-    AudioDeviceInfo[] adis = mAudioManager.getDevices(AudioManager.GET_DEVICES_INPUTS);
+    AudioDeviceInfo[] adis = 
+mAudioManager.getDevices(AudioManager.GET_DEVICES_INPUTS);
     for (AudioDeviceInfo adi : adis) {
-        if (adi.getType() == deviceType) {
-            return adi;
-        }
+      if (adi.getType() == deviceType) {
+        return adi;
+      }
     }
     return null;
   }
@@ -589,12 +632,15 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
       return;
     }
 
+    mAudioRecorderIsMeteringEnabled
+      = options.getBoolean(RECORDING_OPTION_IS_METERING_ENABLED_KEY);
+
     removeAudioRecorder();
 
     final ReadableArguments androidOptions = options.getArguments(RECORDING_OPTIONS_KEY);
 
     final String filename = "recording-" + UUID.randomUUID().toString()
-        + androidOptions.getString(RECORDING_OPTION_EXTENSION_KEY);
+      + androidOptions.getString(RECORDING_OPTION_EXTENSION_KEY);
     try {
       final File directory = new File(mContext.getFilesDir() + File.separator + "Audio");
       ensureDirExists(directory);
@@ -610,7 +656,7 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
     mAudioRecorder = new MediaRecorder();
     mAudioRecorder.setAudioSource(MediaRecorder.AudioSource.DEFAULT);
 
-    if (audioInputDevice != null && android.os.Build.VERSION.SDK_INT >= 28) {
+    if (audioInputDevice != null && android.os.Build.VERSION.SDK_INT >= 29) {
       mAudioRecorder.setPreferredDevice(audioInputDevice);
       mAudioManager.setBluetoothScoOn(true);
       mAudioManager.startBluetoothSco();
@@ -681,7 +727,7 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
     if (checkAudioRecorderExistsOrReject(promise)) {
       if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
         promise.reject("E_AUDIO_VERSIONINCOMPATIBLE", "Pausing an audio recording is unsupported on" +
-            " Android devices running SDK < 24.");
+          " Android devices running SDK < 24.");
       } else {
         try {
           mAudioRecorder.pause();
@@ -705,7 +751,13 @@ public class AVManager implements LifecycleEventListener, AudioManager.OnAudioFo
       try {
         mAudioRecorder.stop();
       } catch (final RuntimeException e) {
-        promise.reject("E_AUDIO_RECORDINGSTOP", "Stop encountered an error: recording not stopped", e);
+        mAudioRecorderIsPaused = false;
+        if (!mAudioRecorderIsRecording) {
+          promise.reject("E_AUDIO_RECORDINGSTOP", "Stop encountered an error: recording not started", e);
+        } else {
+          mAudioRecorderIsRecording = false;
+          promise.reject("E_AUDIO_NODATA", "Stop encountered an error: no valid audio data has been received", e);
+        }
         return;
       }
 
